@@ -1,0 +1,359 @@
+<html>
+    <head>
+        <script>
+            /**
+             * I HATE BEES
+             *
+             * Not a real game, just some experiments with JS OOP and HTML5 canvas
+             * @see README.md at https://github.com/jmatosp/IHateBees
+             * @author José Pinto <bluecor@gmail.com>
+             *
+             */
+
+
+            /**
+             * Bee Prototype "Abstract Class"
+             * @constructor
+             */
+            var Bee = function() {
+                // 2d position
+                this.x = Math.floor((Math.random() * 1170)+20);
+                this.y = Math.floor((Math.random() * 660)+20);
+                this.heading = Math.floor((Math.random() * 361));
+                this.timeOnThisHeading = 0;
+                this.animation = 0;             // bee animation
+            };
+
+            Bee.prototype.getLife = function() {
+                return this.lifeSpan;
+            };
+
+            Bee.prototype.getHit = function() {
+                this.lifeSpan -= this.hit;
+            };
+
+            Bee.prototype.getType = function() {
+                return 'Bee';
+            };
+
+            Bee.prototype.getX = function() {
+                return this.x;
+            };
+
+            Bee.prototype.getY = function() {
+                return this.y;
+            };
+
+            Bee.prototype.getLifePercentage = function() {
+                return Math.floor(100 * this.lifeSpan / this.maxLifeSpan);
+            };
+
+            /**
+             * This physics sucks, i'm so lazy to search some 2d math... sin and cos will do
+             */
+            Bee.prototype.moveRandom = function() {
+
+                // change heading from random moves 10
+                this.timeOnThisHeading += Math.floor(Math.random() * 5);
+                if (this.timeOnThisHeading > 20) {
+                    // new heading
+                    this.heading = Math.floor((Math.random() * 361));
+                    this.timeOnThisHeading = 0;
+                }
+                this.y = this.y + (Math.cos(this.heading) * 10);
+                this.x = this.x + (Math.sin(this.heading) * 12);
+
+                this.checkBoundaries();
+            };
+
+            /**
+             * Has the bee hit the limit of the field? if yes turn around
+             */
+            Bee.prototype.checkBoundaries = function() {
+                // check if hitting boundary
+                if (this.getX() < 20 || this.getX() > 1200 || this.getY() < 25 || this.getY() > 670) {
+                    // turn around
+                    this.heading = this.heading + 180;
+                    // go this way for a while
+                    this.timeOnThisHeading = -10;
+                }
+            };
+
+            Bee.prototype.toggleAnimation = function() {
+                this.animation = !this.animation;
+                return !this.animation;
+            };
+
+            /**
+             * Queen bee
+             * @constructor
+             */
+            var QueenBee = function () {
+                this.maxLifeSpan = 100;
+                this.lifeSpan = this.maxLifeSpan;
+                this.hit = 8;
+                Bee.call(this);
+            };
+
+            // "Extending" Bee
+            QueenBee.prototype = Object.create(Bee.prototype);
+
+            // override QueenBee, moves faster
+            QueenBee.prototype.moveRandom = function() {
+                // change heading from random moves 10
+                this.timeOnThisHeading += Math.floor(Math.random() * 4);
+                if (this.timeOnThisHeading > 20) {
+                    // new heading
+                    this.heading = Math.floor((Math.random() * 361));
+                    this.timeOnThisHeading = 0;
+                }
+                this.y = this.y + (Math.cos(this.heading) * 20);
+                this.x = this.x + (Math.sin(this.heading) * 25);
+
+                this.checkBoundaries();
+            };
+
+            /**
+             * Worker bee
+             * @constructor
+             */
+            var WorkerBee = function() {
+                this.maxLifeSpan = 75;
+                this.lifeSpan = this.maxLifeSpan;
+                this.hit = 10;
+                Bee.call(this);
+            };
+
+            // "Extending" Bee
+            WorkerBee.prototype = Object.create(Bee.prototype);
+
+            /**
+             * Drone bee
+             */
+            var DroneBee = function() {
+                this.maxLifeSpan = 50;
+                this.lifeSpan = this.maxLifeSpan;
+                this.hit = 12;
+                Bee.call(this);
+            };
+
+            // "Extending" Bee
+            DroneBee.prototype = Object.create(Bee.prototype);
+
+            /**
+             * Game context, this should "extend" State
+             */
+            var Game = function() {
+                this.setup();
+            };
+
+            // count alive Bees
+            Game.prototype.getBeeCount = function() {
+                var count = 0;
+                this.bees.some(function(bee) {
+                    if (bee instanceof QueenBee && bee.getLife() <= 0) {
+                        count = 0;
+                        return true;        //short circuit
+                    }
+                    if (bee.getLife() > 0) {
+                        count++;
+                    }
+                });
+                return count;
+            };
+
+            /**
+             * hit on the area, check if any bee there
+             */
+            Game.prototype.hitPosition = function(x, y) {
+                this.bees.forEach(function(bee) {
+                   if (x > bee.getX() - 20 && x < bee.getX() + 50
+                       && y > bee.getY() - 20 && y < bee.getY() + 40) {
+                        //hit bee
+                       bee.getHit();
+                       // @todo remove Bee from stack if dead
+                   }
+                });
+
+                // update status
+                if (this.getBeeCount() == 0) {
+                    this.status = false;        // Game Over
+                }
+            };
+
+            // tell each Bee to move randomly
+            Game.prototype.moveBees = function()  {
+                // move all bees randomly
+                this.bees.forEach(function(bee) {
+                    bee.moveRandom();
+                });
+            };
+
+            Game.prototype.playing = function() {
+                return this.status;
+            };
+
+            // forEach??
+            Game.prototype.setup = function() {
+                // build
+                this.bees = [];
+                this.bees.push(new QueenBee());
+                this.bees.push(new WorkerBee());
+                this.bees.push(new WorkerBee());
+                this.bees.push(new WorkerBee());
+                this.bees.push(new WorkerBee());
+                this.bees.push(new WorkerBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+                this.bees.push(new DroneBee());
+
+                // status, true = PLAYING
+                this.status = true;
+            };
+
+            /**
+             * Render Game to HTML5, takes Game object, witch has context
+             * @constructor
+             * @param context Game
+             */
+            var GameView = function(context){
+                this.model = context;
+            };
+
+            GameView.prototype.render = function() {
+
+                var canvas = document.getElementById("beeCanvas");
+                if (canvas.getContext) {
+                    var ctx = canvas.getContext("2d");
+
+                    // game over??
+                    if (game.getBeeCount() <= 0) {
+
+                        // display game Title
+                        ctx.font = "50px Georgia";
+                        ctx.strokeStyle = "black";
+                        ctx.strokeText('Game Over', 500, 350);
+
+                    } else {
+                        // draw field
+                        var background = document.getElementById("field");
+                        ctx.drawImage(background, 0, 0);
+
+                        // display game Title
+                        ctx.font = "25px Georgia";
+                        ctx.strokeStyle = "black";
+                        ctx.strokeText('I Hate Bees', 10, 30);
+
+                        this.renderBees(ctx);
+
+                        this.renderHUD(ctx);
+
+                        // display game status
+                        ctx.font = "25px Georgia";
+                        ctx.strokeStyle = "yellow";
+                        ctx.strokeText('Bees ' + this.model.getBeeCount(), 1170, 30);
+
+                        var vid = document.getElementById("beesAudio");
+                        vid.volume = 0.05;
+                        vid.play();
+                    }
+                }
+
+            };
+
+            GameView.prototype.renderHUD = function(ctx) {
+                ctx.font = "25px Georgia";
+                ctx.strokeStyle = "yellow";
+                ctx.strokeText('Bees ' + this.model.getBeeCount(), 1170, 30);
+            };
+
+            GameView.prototype.renderBees = function(ctx) {
+                // bee template
+                var BeeSprite = document.getElementById("bees");
+                this.model.bees.forEach(function(bee) {
+                    // is alive
+                    if (bee.getLife() > 0) {
+                        // draw bee
+                        if (bee instanceof QueenBee) {
+                            ctx.drawImage(BeeSprite, bee.toggleAnimation() * 40, 150, 37, 40, bee.getX(), bee.getY(), 37, 40);
+                        } else if (bee instanceof WorkerBee) {
+                            ctx.drawImage(BeeSprite, bee.toggleAnimation() * 40, 110, 37, 40, bee.getX(), bee.getY(), 37, 40);
+                        } else {
+                            ctx.drawImage(BeeSprite, bee.toggleAnimation() * 40, 260, 37, 40, bee.getX(), bee.getY(), 37, 40);
+                        }
+
+                        // display life
+                        ctx.font = "11px Georgia";
+                        ctx.fillStyle = "green";
+                        ctx.fillText(bee.getLifePercentage(), bee.getX(), bee.getY());
+                    }
+                });
+
+            };
+
+        </script>
+        <style>
+            .hide {
+                display: none;
+            }
+            canvas {
+                cursor: url(assets/book.png), none;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="beeCanvas" width="1280" height="720">
+        </canvas>
+
+        <div id="sprites" class="hide">
+            <img id="bees" src="assets/beesprites.png"/>
+            <img id="field" src="assets/flowerField.jpg"/>
+            <img id="book" src="assets/book.png"/>
+        </div>
+
+        <audio id="beesAudio">
+            <source src="assets/swamp.wav" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+
+        <audio id="beesAudioKill">
+            <source src="assets/punch.wav" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+
+
+        <script>
+            // start game context
+            var game = new Game();
+            var view = new GameView(game);
+
+            // @todo missing controler/mediator
+            // setup
+            var elem = document.getElementById('beeCanvas');
+            var elemLeft = elem.offsetLeft;
+            var elemTop = elem.offsetTop;
+            elem.addEventListener('click', function(event) {
+                var x = event.pageX - elemLeft,
+                    y = event.pageY - elemTop;
+
+                // hit test
+                game.hitPosition(x, y);
+
+                var vid = document.getElementById("beesAudioKill");
+                vid.play();
+            });
+
+            // game cycle
+            setInterval(function() {
+                // move bees
+                game.moveBees();
+                view.render();
+            }, 150);
+        </script>
+    </body>
+</html>
